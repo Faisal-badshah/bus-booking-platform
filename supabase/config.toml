@@ -1,0 +1,22 @@
+project_id = "qbjoxkvqbyeolavoigrp"
+
+[functions.searchTrips]
+verify_jwt = false
+
+[functions.available-seats]
+verify_jwt = false
+
+[functions.resendWebhook]
+verify_jwt = false
+
+[functions.mockPaymentProvider]
+verify_jwt = true
+
+[functions.saveLocation]
+verify_jwt = true
+
+[functions.getPublicSettings]
+verify_jwt = false
+
+[functions.manageAdminRole]
+verify_jwt = true
