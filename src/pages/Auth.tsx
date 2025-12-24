@@ -28,15 +28,25 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate("/");
-      }
-    };
-    checkUser();
-  }, [navigate]);
+useEffect(() => {
+  const handleMagicLink = async () => {
+    const hash = window.location.hash;
+
+    // Supabase sends tokens in the hash (#...)
+    if (hash.includes("access_token") || hash.includes("code")) {
+      await supabase.auth.exchangeCodeForSession(window.location.href);
+      navigate("/", { replace: true });
+      return;
+    }
+
+    // normal session check
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) navigate("/");
+  };
+
+  handleMagicLink();
+}, [navigate]);
+
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
