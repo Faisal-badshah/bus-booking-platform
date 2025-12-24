@@ -59,7 +59,7 @@ useEffect(() => {
         email: validated.email,
         password: validated.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/auth`,
           data: {
             full_name: validated.fullName,
           },
@@ -225,4 +225,4 @@ useEffect(() => {
       </Card>
     </div>
   );
-}
+} 
