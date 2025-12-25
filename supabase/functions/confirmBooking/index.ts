@@ -1,145 +1,144 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error("Missing env vars");
+      return new Response(
+        JSON.stringify({ success: false, message: "Server config error" }),
+        { headers: corsHeaders, status: 500 },
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, serviceKey);
 
     const { booking_id, payment_reference } = await req.json();
 
-    console.log('Confirming booking:', { booking_id, payment_reference });
+    console.log("Incoming booking confirmation", { booking_id, payment_reference });
 
     if (!booking_id || !payment_reference) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'booking_id and payment_reference are required' 
+        JSON.stringify({
+          success: false,
+          message: "booking_id and payment_reference are required",
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: corsHeaders, status: 400 },
       );
     }
 
-    // STEP 1: SELECT booking FOR UPDATE (with transaction semantics)
-    const { data: booking, error: fetchError } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('id', booking_id)
+    // Fetch booking
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .select("*")
+      .eq("id", booking_id)
       .single();
 
-    if (fetchError || !booking) {
-      console.error('Booking not found:', fetchError);
+    if (bookingError || !booking) {
+      console.error("Booking not found", bookingError);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Booking not found' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+        JSON.stringify({ success: false, message: "Booking not found" }),
+        { headers: corsHeaders, status: 404 },
       );
     }
 
-    // STEP 2: Check if status is pending_payment
-    if (booking.status !== 'pending_payment') {
-      console.error('Invalid booking status:', booking.status);
+    // Must be pending_payment
+    if (booking.status !== "pending_payment") {
+      console.error("Invalid booking status", booking.status);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: `Cannot confirm booking with status: ${booking.status}` 
+        JSON.stringify({
+          success: false,
+          message: `Cannot confirm booking with status ${booking.status}`,
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: corsHeaders, status: 400 },
       );
     }
 
-    // STEP 3: Update booking to confirmed status
+    // Update booking to confirmed
     const { data: updatedBooking, error: updateError } = await supabase
-      .from('bookings')
+      .from("bookings")
       .update({
-        status: 'confirmed',
-        payment_reference: payment_reference,
-        confirmed_at: new Date().toISOString()
+        status: "confirmed",
+        payment_reference,
+        confirmed_at: new Date().toISOString(),
       })
-      .eq('id', booking_id)
-      .eq('status', 'pending_payment') // Double-check status hasn't changed
+      .eq("id", booking_id)
+      .eq("status", "pending_payment")
       .select()
       .single();
 
-    if (updateError) {
-      console.error('Error updating booking:', updateError);
+    if (updateError || !updatedBooking) {
+      console.error("Error updating booking", updateError);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Error confirming booking' 
+        JSON.stringify({
+          success: false,
+          message: "Failed to confirm booking",
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        { headers: corsHeaders, status: 500 },
       );
     }
 
-    if (!updatedBooking) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Booking status changed during confirmation' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
-      );
-    }
+    // Insert payment row
+    await supabase.from("payments").insert({
+      booking_id,
+      amount: booking.total_amount,
+      status: "completed",
+      transaction_id: payment_reference,
+      payment_method: "online",
+    });
 
-    // Create payment record
-    await supabase
-      .from('payments')
-      .insert({
-        booking_id: booking_id,
-        amount: booking.total_amount,
-        status: 'completed',
-        transaction_id: payment_reference,
-        payment_method: 'online'
-      });
+    console.log("Booking confirmed — triggering ticket generation…");
 
-    console.log('Booking confirmed successfully:', booking_id);
-
-    // STEP 4: Trigger ticket generation immediately after confirmation
+    // 🔥 Trigger ticket generation using direct fetch (correct auth)
     try {
-      const ticketResponse = await supabase.functions.invoke('issueTicket', {
-        body: { booking_id: booking_id }
-      });
-      
-      if (ticketResponse.error) {
-        console.error('Error triggering ticket generation:', ticketResponse.error);
+      const ticketRes = await fetch(
+        `${supabaseUrl}/functions/v1/issueTicket`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ booking_id }),
+        },
+      );
+
+      if (!ticketRes.ok) {
+        console.error("IssueTicket returned", ticketRes.status);
       } else {
-        console.log('Ticket generation triggered successfully');
+        console.log("Ticket issued successfully");
       }
     } catch (ticketError) {
-      console.error('Failed to trigger ticket generation:', ticketError);
-      // Don't fail the confirmation if ticket generation fails
+      console.error("Failed to trigger issueTicket", ticketError);
     }
 
-    // STEP 5: Return success
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        booking_id: booking_id,
-        message: 'Booking confirmed successfully'
+      JSON.stringify({
+        success: true,
+        booking_id,
+        message: "Booking confirmed",
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: corsHeaders, status: 200 },
     );
-
-  } catch (error) {
-    console.error('Error in confirmBooking:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
+  } catch (err) {
+    console.error("Fatal confirmBooking error", err);
     return new Response(
-      JSON.stringify({ success: false, message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ success: false, message: "Unexpected server error" }),
+      { headers: corsHeaders, status: 500 },
     );
   }
 });
