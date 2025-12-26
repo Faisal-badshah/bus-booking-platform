@@ -17,9 +17,14 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+    if (!supabaseUrl || !serviceKey) {
+      throw new Error("Missing Supabase environment variables");
+    }
+
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { booking_id, payment_reference } = await req.json();
+    const body = await req.json();
+    const { booking_id, payment_reference } = body;
 
     console.log("Incoming booking confirmation", {
       booking_id,
@@ -32,48 +37,76 @@ serve(async (req) => {
           success: false,
           message: "booking_id is required",
         }),
-        { headers: corsHeaders, status: 400 },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
       );
     }
 
-    // fetch booking
-    const { data: booking } = await supabase
+    // Fetch booking
+    const { data: booking, error: fetchError } = await supabase
       .from("bookings")
       .select("*")
       .eq("id", booking_id)
       .single();
 
-    if (!booking) {
+    if (fetchError || !booking) {
+      console.error("Booking fetch error:", fetchError);
       return new Response(
         JSON.stringify({
           success: false,
           message: "Booking not found",
         }),
-        { headers: corsHeaders, status: 404 },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 },
       );
     }
 
-    // if already confirmed → don't break, just issue ticket again
+    console.log("Booking found, current status:", booking.status);
+
+    // If already confirmed → don't break, just issue ticket again
     if (booking.status === "confirmed") {
       console.log("Booking already confirmed — triggering ticket generation");
 
-      await supabase.functions.invoke("issueTicket", {
-        body: { booking_id },
-        headers: {
-          Authorization: `Bearer ${serviceKey}`,
-        },
-      });
+      try {
+        const ticketResult = await supabase.functions.invoke("issueTicket", {
+          body: { booking_id },
+        });
 
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Booking already confirmed, ticket triggered",
-        }),
-        { headers: corsHeaders },
-      );
+        console.log("Ticket generation result:", ticketResult);
+
+        if (ticketResult.error) {
+          console.error("Ticket generation error:", ticketResult.error);
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: "Booking already confirmed, but ticket generation had issues",
+              ticket_error: ticketResult.error,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Booking already confirmed, ticket triggered",
+            ticket_data: ticketResult.data,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      } catch (ticketError) {
+        console.error("Ticket invocation error:", ticketError);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Booking confirmed but ticket generation failed",
+            error: ticketError instanceof Error ? ticketError.message : "Unknown error",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
-    // if still pending → confirm it
+    // If still pending → confirm it
+    console.log("Confirming pending booking...");
     const { error: updateError } = await supabase
       .from("bookings")
       .update({
@@ -84,40 +117,72 @@ serve(async (req) => {
       .eq("id", booking_id);
 
     if (updateError) {
-      console.error(updateError);
+      console.error("Booking update error:", updateError);
       return new Response(
         JSON.stringify({
           success: false,
           message: "Failed to confirm booking",
+          error: updateError.message,
         }),
-        { headers: corsHeaders, status: 500 },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 },
       );
     }
 
-    console.log("Booking confirmed — triggering ticket generation");
+    console.log("Booking confirmed successfully — triggering ticket generation");
 
-    await supabase.functions.invoke("issueTicket", {
-      body: { booking_id },
-      headers: {
-        Authorization: `Bearer ${serviceKey}`,
-      },
-    });
+    // Invoke ticket generation
+    try {
+      const ticketResult = await supabase.functions.invoke("issueTicket", {
+        body: { booking_id },
+      });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Booking confirmed and ticket generated",
-      }),
-      { headers: corsHeaders },
-    );
+      console.log("Ticket generation result:", ticketResult);
+
+      if (ticketResult.error) {
+        console.error("Ticket generation error:", ticketResult.error);
+        // Still return success since booking was confirmed
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Booking confirmed but ticket generation failed",
+            booking_id,
+            ticket_error: ticketResult.error.message,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Booking confirmed and ticket generated",
+          booking_id,
+          ticket_data: ticketResult.data,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    } catch (ticketError) {
+      console.error("Ticket invocation error:", ticketError);
+      // Still return success since booking was confirmed
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Booking confirmed but ticket generation failed",
+          booking_id,
+          error: ticketError instanceof Error ? ticketError.message : "Unknown error",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
   } catch (e) {
-    console.error(e);
+    console.error("Unexpected error in confirmBooking:", e);
     return new Response(
       JSON.stringify({
         success: false,
-        message: e.message ?? "Unknown error",
+        message: e instanceof Error ? e.message : "Unknown error",
+        details: "Check Supabase logs for more information",
       }),
-      { headers: corsHeaders, status: 500 },
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 },
     );
   }
 });

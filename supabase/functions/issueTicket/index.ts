@@ -7,24 +7,34 @@ import { createHmac } from "https://deno.land/std@0.177.0/node/crypto.ts";
 
 // QR Code generation using API (Deno-compatible)
 async function generateQRCodePNG(text: string, size: number = 200): Promise<Uint8Array> {
-  const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&format=png`);
-  const arrayBuffer = await response.arrayBuffer();
-  return new Uint8Array(arrayBuffer);
+  try {
+    const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&format=png`);
+    if (!response.ok) throw new Error(`QR API returned ${response.status}`);
+    const arrayBuffer = await response.arrayBuffer();
+    return new Uint8Array(arrayBuffer);
+  } catch (error) {
+    console.error('QR code generation failed:', error);
+    throw new Error(`Failed to generate QR code: ${error.message}`);
+  }
 }
 
 async function generateQRCodeDataURL(text: string, size: number = 300): Promise<string> {
-  const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&format=png`);
-  const arrayBuffer = await response.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-  return `data:image/png;base64,${base64}`;
+  try {
+    const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&format=png`);
+    if (!response.ok) throw new Error(`QR API returned ${response.status}`);
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    return `data:image/png;base64,${base64}`;
+  } catch (error) {
+    console.error('QR data URL generation failed:', error);
+    throw error;
+  }
 }
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 // Helper function to sign QR payload
 function signQRPayload(payload: any, secret: string): string {
@@ -37,7 +47,14 @@ function signQRPayload(payload: any, secret: string): string {
 
 // Helper function to log events
 async function logEvent(supabase: any, data: any) {
-  await supabase.from('booking_logs').insert(data);
+  try {
+    await supabase.from('booking_logs').insert({
+      ...data,
+      created_at: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Failed to log event:', error);
+  }
 }
 
 serve(async (req) => {
@@ -45,13 +62,28 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const qrSecret = Deno.env.get('QR_SIGNING_SECRET')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+  let supabase: any = null;
+  let booking: any = null;
+  let booking_id = '';
 
-    const { booking_id } = await req.json();
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const qrSecret = Deno.env.get('QR_SIGNING_SECRET');
+    const resendKey = Deno.env.get('RESEND_API_KEY');
+
+    // Validate environment variables
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase environment variables');
+    }
+    if (!qrSecret) {
+      throw new Error('Missing QR_SIGNING_SECRET');
+    }
+
+    supabase = createClient(supabaseUrl, supabaseKey);
+
+    const body = await req.json();
+    booking_id = body.booking_id;
 
     console.log('Issuing ticket for booking:', booking_id);
 
@@ -63,19 +95,38 @@ serve(async (req) => {
     }
 
     // STEP 1: Fetch booking details with trip and route info
-    const { data: booking, error: bookingError } = await supabase
+    console.log('Fetching booking details...');
+    const { data: bookingData, error: bookingError } = await supabase
       .from('bookings')
       .select(`
-        *,
+        id,
+        user_id,
+        trip_id,
+        seat_number,
+        passenger_name,
+        passenger_email,
+        passenger_phone,
+        total_amount,
+        status,
+        confirmed_at,
+        payment_reference,
+        booking_group_id,
+        from_index,
+        to_index,
         trips:trip_id (
+          id,
           trip_date,
           departure_time,
           arrival_time,
+          route_id,
+          bus_id,
           routes:route_id (
+            id,
             name,
             stops
           ),
           buses:bus_id (
+            id,
             name
           )
         )
@@ -83,12 +134,12 @@ serve(async (req) => {
       .eq('id', booking_id)
       .single();
 
-    if (bookingError || !booking) {
+    if (bookingError || !bookingData) {
       console.error('Booking not found:', bookingError);
       await logEvent(supabase, {
         booking_id,
         event_type: 'ticket_generation_failed',
-        metadata: { reason: 'booking_not_found' }
+        error: bookingError?.message || 'Booking not found'
       });
       return new Response(
         JSON.stringify({ success: false, message: 'Booking not found' }),
@@ -96,23 +147,34 @@ serve(async (req) => {
       );
     }
 
+    booking = bookingData;
+
     if (booking.status !== 'confirmed') {
+      console.warn('Booking status is not confirmed:', booking.status);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: 'Only confirmed bookings can have tickets issued' 
+          message: 'Only confirmed bookings can have tickets issued',
+          current_status: booking.status
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
+    // Extract trip and route data
     const trip = Array.isArray(booking.trips) ? booking.trips[0] : booking.trips;
-    const route = trip?.routes ? (Array.isArray(trip.routes) ? trip.routes[0] : trip.routes) : null;
-    const bus = trip?.buses ? (Array.isArray(trip.buses) ? trip.buses[0] : trip.buses) : null;
+    if (!trip) {
+      throw new Error('Trip data not found');
+    }
+
+    const route = Array.isArray(trip.routes) ? trip.routes[0] : trip.routes;
+    const bus = Array.isArray(trip.buses) ? trip.buses[0] : trip.buses;
     const stops = route?.stops || [];
     
     const from_stop = stops[booking.from_index] || 'Unknown';
     const to_stop = stops[booking.to_index] || 'Unknown';
+
+    console.log('Trip details:', { from_stop, to_stop, trip_date: trip.trip_date });
 
     // STEP 2: Generate signed QR payload
     const qrPayload = {
@@ -122,13 +184,15 @@ serve(async (req) => {
       passenger_name: booking.passenger_name,
       from_stop,
       to_stop,
-      trip_date: trip?.trip_date,
-      expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+      trip_date: trip.trip_date,
+      expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     };
 
     const signedQR = signQRPayload(qrPayload, qrSecret);
+    console.log('QR payload signed');
 
     // STEP 3: Generate PDF ticket
+    console.log('Generating PDF ticket...');
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595, 842]); // A4 size
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -210,7 +274,7 @@ serve(async (req) => {
     });
     yPosition -= 25;
     
-    addField('Payment Reference:', booking.payment_reference || 'N/A');
+    addField('Payment Reference:', booking.payment_reference || 'Pay on Bus');
     addField('Confirmed At:', booking.confirmed_at ? new Date(booking.confirmed_at).toLocaleString() : 'N/A');
     
     yPosition -= 30;
@@ -234,7 +298,8 @@ serve(async (req) => {
     });
     yPosition -= 25;
     
-    // Generate QR code as PNG (Deno-compatible using API)
+    // Generate QR code as PNG
+    console.log('Generating QR code PNG...');
     const qrImageBytes = await generateQRCodePNG(signedQR, 200);
     
     // Embed QR code image in PDF
@@ -249,7 +314,6 @@ serve(async (req) => {
     });
     
     yPosition -= qrDims.height + 10;
-    
     yPosition -= 20;
     page.drawLine({
       start: { x: 50, y: yPosition },
@@ -269,14 +333,16 @@ serve(async (req) => {
     
     // Generate PDF bytes
     const pdfBytes = await pdfDoc.save();
+    console.log('PDF generated, size:', pdfBytes.length, 'bytes');
 
     // STEP 4: Upload PDF to storage
+    console.log('Uploading PDF to storage...');
     const ticketFileName = `${booking.user_id}/${booking_id}.pdf`;
 
     const { data: uploadData, error: uploadError } = await supabase
       .storage
       .from('tickets')
-      .upload(ticketFileName, pdfBytes, {
+      .upload(ticketFileName, new Blob([pdfBytes], { type: 'application/pdf' }), {
         contentType: 'application/pdf',
         upsert: true
       });
@@ -287,400 +353,155 @@ serve(async (req) => {
         booking_id,
         booking_group_id: booking.booking_group_id,
         event_type: 'ticket_generation_failed',
-        metadata: { reason: 'upload_error', error: uploadError.message }
+        error: uploadError.message
       });
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Error uploading ticket',
-          error: uploadError.message 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+      throw new Error(`Storage upload failed: ${uploadError.message}`);
     }
 
+    console.log('PDF uploaded successfully:', uploadData);
+
     // STEP 5: Generate signed URL for the ticket
-    const { data: urlData } = await supabase
+    console.log('Generating signed URL...');
+    const { data: urlData, error: urlError } = await supabase
       .storage
       .from('tickets')
       .createSignedUrl(ticketFileName, 60 * 60 * 24 * 7); // 7 days
 
+    if (urlError) {
+      console.error('Error creating signed URL:', urlError);
+      throw new Error(`Signed URL creation failed: ${urlError.message}`);
+    }
+
     const ticket_url = urlData?.signedUrl || '';
+    console.log('Signed URL created');
 
     // STEP 6: Update booking with ticket URL
-    await supabase
+    console.log('Updating booking with ticket URL...');
+    const { error: updateError } = await supabase
       .from('bookings')
       .update({ ticket_url })
       .eq('id', booking_id);
 
-    // STEP 7: Send email with ticket (with retry logic)
-    // STEP 7: Send email with ticket (with retry logic)
-    const sendEmailWithRetry = async (retries = 3) => {
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-          console.log(`Email attempt ${attempt}/${retries} for booking ${booking_id}`);
-          
-          // Generate QR code as data URL for email (Deno-compatible using API)
-          const qrCodeEmailDataUrl = await generateQRCodeDataURL(signedQR, 300);
+    if (updateError) {
+      console.error('Error updating booking:', updateError);
+      throw new Error(`Booking update failed: ${updateError.message}`);
+    }
 
-          const emailResult = await resend.emails.send({
-            from: 'Bus Booking <onboarding@resend.dev>',
-            to: [booking.passenger_email],
-            subject: `🎫 Your Bus Ticket - ${route?.name || 'Booking'} (${trip?.trip_date})`,
-            html: `
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                  body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                    line-height: 1.6;
-                    color: #333;
-                    max-width: 600px;
-                    margin: 0 auto;
-                    padding: 20px;
-                    background-color: #f5f5f5;
-                  }
-                  .container {
-                    background: white;
-                    border-radius: 12px;
-                    overflow: hidden;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                  }
-                  .header {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 40px 30px;
-                    text-align: center;
-                  }
-                  .header h1 {
-                    margin: 0 0 10px 0;
-                    font-size: 28px;
-                    font-weight: 700;
-                  }
-                  .header p {
-                    margin: 0;
-                    font-size: 16px;
-                    opacity: 0.9;
-                  }
-                  .content {
-                    padding: 30px;
-                  }
-                  .info-section {
-                    margin-bottom: 30px;
-                  }
-                  .info-section h2 {
-                    color: #667eea;
-                    font-size: 18px;
-                    margin: 0 0 15px 0;
-                    font-weight: 600;
-                  }
-                  .info-row {
-                    display: flex;
-                    padding: 12px 0;
-                    border-bottom: 1px solid #f0f0f0;
-                  }
-                  .info-row:last-child {
-                    border-bottom: none;
-                  }
-                  .info-label {
-                    font-weight: 600;
-                    color: #666;
-                    min-width: 140px;
-                  }
-                  .info-value {
-                    color: #333;
-                    flex: 1;
-                  }
-                  .ticket-badge {
-                    background: #667eea;
-                    color: white;
-                    padding: 8px 16px;
-                    border-radius: 20px;
-                    display: inline-block;
-                    font-weight: 600;
-                    font-size: 14px;
-                  }
-                  .qr-section {
-                    background: #f8f9ff;
-                    padding: 30px;
-                    border-radius: 8px;
-                    text-align: center;
-                    margin: 30px 0;
-                  }
-                  .qr-section h3 {
-                    color: #667eea;
-                    margin: 0 0 15px 0;
-                    font-size: 18px;
-                  }
-                  .qr-section p {
-                    color: #666;
-                    margin: 0 0 20px 0;
-                    font-size: 14px;
-                  }
-                  .qr-code-image {
-                    max-width: 250px;
-                    margin: 0 auto 20px;
-                    padding: 20px;
-                    background: white;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                  }
-                  .download-button {
-                    display: inline-block;
-                    background: #667eea;
-                    color: white;
-                    padding: 14px 32px;
-                    text-decoration: none;
-                    border-radius: 6px;
-                    font-weight: 600;
-                    margin: 10px 0;
-                    transition: background 0.3s;
-                  }
-                  .download-button:hover {
-                    background: #5568d3;
-                  }
-                  .important-note {
-                    background: #fff4e6;
-                    border-left: 4px solid #ff9800;
-                    padding: 15px;
-                    margin: 20px 0;
-                    border-radius: 4px;
-                  }
-                  .important-note strong {
-                    color: #ff9800;
-                    display: block;
-                    margin-bottom: 5px;
-                  }
-                  .footer {
-                    text-align: center;
-                    padding: 20px 30px;
-                    background: #f8f9fa;
-                    color: #666;
-                    font-size: 13px;
-                  }
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <div class="header">
-                    <h1>🎫 Your Ticket is Ready!</h1>
-                    <p>Booking confirmed for ${booking.passenger_name}</p>
-                  </div>
+    // STEP 7: Send email with ticket
+    if (resendKey) {
+      console.log('Sending email with ticket...');
+      try {
+        const resend = new Resend(resendKey);
+        
+        // Generate QR code as data URL for email
+        const qrCodeEmailDataUrl = await generateQRCodeDataURL(signedQR, 300);
+
+        const { data: emailData, error: emailError } = await resend.emails.send({
+          from: 'Bus Booking <onboarding@resend.dev>',
+          to: [booking.passenger_email],
+          subject: `🎫 Your Bus Ticket - ${route?.name || 'Booking'} (${trip?.trip_date})`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+                .container { background: white; border-radius: 12px; overflow: hidden; max-width: 600px; margin: 0 auto; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; text-align: center; }
+                .content { padding: 30px; }
+                .info-section { margin-bottom: 30px; }
+                .info-section h2 { color: #667eea; font-size: 18px; margin: 0 0 15px 0; }
+                .info-row { display: flex; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+                .info-label { font-weight: 600; color: #666; min-width: 140px; }
+                .info-value { color: #333; flex: 1; }
+                .qr-section { background: #f8f9ff; padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0; }
+                .qr-code-image { max-width: 250px; margin: 0 auto 20px; padding: 20px; background: white; border-radius: 8px; }
+                .download-button { display: inline-block; background: #667eea; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; }
+                .important-note { background: #fff4e6; border-left: 4px solid #ff9800; padding: 15px; margin: 20px 0; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>🎫 Your Ticket is Ready!</h1>
+                  <p>Booking confirmed for ${booking.passenger_name}</p>
+                </div>
+                <div class="content">
+                  <p>Dear <strong>${booking.passenger_name}</strong>,</p>
+                  <p>Your bus ticket has been confirmed! Please find your journey details below.</p>
                   
-                  <div class="content">
-                    <p style="font-size: 16px; margin-bottom: 20px;">
-                      Dear <strong>${booking.passenger_name}</strong>,
-                    </p>
-                    <p style="margin-bottom: 20px;">
-                      Your bus ticket has been confirmed! Please find your journey details below.
-                    </p>
-                    
-                    <div class="info-section">
-                      <h2>📋 Booking Details</h2>
-                      <div class="info-row">
-                        <span class="info-label">Booking ID:</span>
-                        <span class="info-value">${booking.id.substring(0, 20)}...</span>
-                      </div>
-                      <div class="info-row">
-                        <span class="info-label">Passenger:</span>
-                        <span class="info-value">${booking.passenger_name}</span>
-                      </div>
-                      <div class="info-row">
-                        <span class="info-label">Email:</span>
-                        <span class="info-value">${booking.passenger_email}</span>
-                      </div>
-                      <div class="info-row">
-                        <span class="info-label">Phone:</span>
-                        <span class="info-value">${booking.passenger_phone}</span>
-                      </div>
-                    </div>
-
-                    <div class="info-section">
-                      <h2>🚌 Journey Details</h2>
-                      <div class="info-row">
-                        <span class="info-label">Route:</span>
-                        <span class="info-value"><span class="ticket-badge">${route?.name || 'N/A'}</span></span>
-                      </div>
-                      <div class="info-row">
-                        <span class="info-label">From:</span>
-                        <span class="info-value">${from_stop}</span>
-                      </div>
-                      <div class="info-row">
-                        <span class="info-label">To:</span>
-                        <span class="info-value">${to_stop}</span>
-                      </div>
-                      <div class="info-row">
-                        <span class="info-label">Date:</span>
-                        <span class="info-value">${trip?.trip_date || 'N/A'}</span>
-                      </div>
-                      <div class="info-row">
-                        <span class="info-label">Departure:</span>
-                        <span class="info-value">${trip?.departure_time || 'N/A'}</span>
-                      </div>
-                      <div class="info-row">
-                        <span class="info-label">Arrival:</span>
-                        <span class="info-value">${trip?.arrival_time || 'N/A'}</span>
-                      </div>
-                      <div class="info-row">
-                        <span class="info-label">Bus:</span>
-                        <span class="info-value">${bus?.name || 'N/A'}</span>
-                      </div>
-                      <div class="info-row">
-                        <span class="info-label">Seat Number:</span>
-                        <span class="info-value"><strong style="color: #667eea; font-size: 18px;">Seat ${booking.seat_number}</strong></span>
-                      </div>
-                      <div class="info-row">
-                        <span class="info-label">Fare:</span>
-                        <span class="info-value"><strong style="color: #4caf50; font-size: 18px;">INR ${booking.total_amount}</strong></span>
-                      </div>
-                    </div>
-
-                    <div class="qr-section">
-                      <h3>🔍 QR Code for Boarding</h3>
-                      <p>Show this QR code to the driver when boarding</p>
-                      <div class="qr-code-image">
-                        <img src="${qrCodeEmailDataUrl}" alt="Ticket QR Code" style="width: 100%; height: auto; display: block;" />
-                      </div>
-                      <a href="${ticket_url}" class="download-button">📄 Download Full Ticket (PDF)</a>
-                    </div>
-
-                    <div class="important-note">
-                      <strong>⚠️ Important Information:</strong>
-                      <ul style="margin: 5px 0; padding-left: 20px;">
-                        <li>Please arrive at least 15 minutes before departure</li>
-                        <li>Keep this email handy for quick boarding verification</li>
-                        <li>Your QR code is unique - do not share it with others</li>
-                        <li>Download the PDF ticket for offline access</li>
-                      </ul>
-                    </div>
-
-                    <p style="margin-top: 30px; color: #666;">
-                      Have a safe and pleasant journey! 🚌✨
-                    </p>
+                  <div class="info-section">
+                    <h2>📋 Booking Details</h2>
+                    <div class="info-row"><span class="info-label">Booking ID:</span><span class="info-value">${booking.id.substring(0, 20)}...</span></div>
+                    <div class="info-row"><span class="info-label">Passenger:</span><span class="info-value">${booking.passenger_name}</span></div>
+                    <div class="info-row"><span class="info-label">Seat:</span><span class="info-value"><strong style="color: #667eea; font-size: 18px;">Seat ${booking.seat_number}</strong></span></div>
+                    <div class="info-row"><span class="info-label">Fare:</span><span class="info-value"><strong style="color: #4caf50;">INR ${booking.total_amount}</strong></span></div>
                   </div>
 
-                  <div class="footer">
-                    <p>This is an automated email. Please do not reply to this message.</p>
-                    <p>© ${new Date().getFullYear()} Bus Booking Service. All rights reserved.</p>
+                  <div class="info-section">
+                    <h2>🚌 Journey Details</h2>
+                    <div class="info-row"><span class="info-label">Route:</span><span class="info-value">${route?.name || 'N/A'}</span></div>
+                    <div class="info-row"><span class="info-label">From:</span><span class="info-value">${from_stop}</span></div>
+                    <div class="info-row"><span class="info-label">To:</span><span class="info-value">${to_stop}</span></div>
+                    <div class="info-row"><span class="info-label">Date:</span><span class="info-value">${trip?.trip_date || 'N/A'}</span></div>
+                    <div class="info-row"><span class="info-label">Departure:</span><span class="info-value">${trip?.departure_time || 'N/A'}</span></div>
+                    <div class="info-row"><span class="info-label">Bus:</span><span class="info-value">${bus?.name || 'N/A'}</span></div>
+                  </div>
+
+                  <div class="qr-section">
+                    <h3>🔍 QR Code for Boarding</h3>
+                    <p>Show this QR code to the driver when boarding</p>
+                    <div class="qr-code-image">
+                      <img src="${qrCodeEmailDataUrl}" alt="Ticket QR Code" style="width: 100%; height: auto;" />
+                    </div>
+                    <a href="${ticket_url}" class="download-button">📄 Download Full Ticket (PDF)</a>
+                  </div>
+
+                  <div class="important-note">
+                    <strong>⚠️ Important Information:</strong>
+                    <ul style="margin: 5px 0; padding-left: 20px;">
+                      <li>Please arrive at least 15 minutes before departure</li>
+                      <li>Keep this email handy for quick boarding verification</li>
+                      <li>Your QR code is unique - do not share it with others</li>
+                    </ul>
                   </div>
                 </div>
-              </body>
-              </html>
-            `,
+              </div>
+            </body>
+            </html>
+          `,
+        });
+
+        if (emailError) {
+          console.error('Email send error:', emailError);
+          await logEvent(supabase, {
+            booking_id,
+            booking_group_id: booking.booking_group_id,
+            event_type: 'email_send_failed',
+            error: emailError.message
           });
-          
-          console.log(`Email sent successfully on attempt ${attempt}:`, emailResult);
-          
+        } else {
+          console.log('Email sent successfully:', emailData);
           await logEvent(supabase, {
             booking_id,
             booking_group_id: booking.booking_group_id,
             event_type: 'email_sent',
-            metadata: { 
-              ticket_url,
-              attempt
-            }
+            metadata: { ticket_url }
           });
-          
-          return true; // Success
-        } catch (emailError) {
-          console.error(`Email attempt ${attempt} failed:`, emailError);
-          const errorMessage = emailError instanceof Error ? emailError.message : 'Unknown error';
-          
-          if (attempt === retries) {
-            // Final attempt failed
-            await logEvent(supabase, {
-              booking_id,
-              booking_group_id: booking.booking_group_id,
-              event_type: 'email_send_failed',
-              metadata: { 
-                error: errorMessage,
-                attempts: retries
-              }
-            });
-            throw emailError;
-          }
-          
-          // Wait before retry (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
         }
-      }
-      return false;
-    };
-
-    try {
-      await sendEmailWithRetry(3);
-      console.log('Ticket issued and emailed successfully:', booking_id);
-    } catch (emailError) {
-      console.error('All email attempts failed, trying SMS fallback:', emailError);
-      
-      // SMS FALLBACK: Try sending ticket link via SMS
-      try {
-        const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-        const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-        const twilioPhone = Deno.env.get('TWILIO_PHONE_NUMBER');
-        
-        if (twilioSid && twilioToken && twilioPhone && booking.passenger_phone) {
-          console.log('Sending SMS fallback to:', booking.passenger_phone);
-          
-          const smsBody = `Your bus ticket is ready!\n\nBooking: ${booking.id.substring(0, 8)}\nRoute: ${route?.name || 'N/A'}\nDate: ${trip?.trip_date}\nSeat: ${booking.seat_number}\n\nDownload ticket: ${ticket_url}\n\nSafe travels!`;
-          
-          const smsResponse = await fetch(
-            `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
-                'Content-Type': 'application/x-www-form-urlencoded',
-              },
-              body: new URLSearchParams({
-                To: booking.passenger_phone,
-                From: twilioPhone,
-                Body: smsBody,
-              }),
-            }
-          );
-          
-          if (smsResponse.ok) {
-            console.log('SMS sent successfully as fallback');
-            await logEvent(supabase, {
-              booking_id,
-              booking_group_id: booking.booking_group_id,
-              event_type: 'sms_fallback_sent',
-              metadata: { 
-                ticket_url,
-                phone: booking.passenger_phone,
-                reason: 'email_failed'
-              }
-            });
-          } else {
-            const smsError = await smsResponse.text();
-            console.error('SMS fallback failed:', smsError);
-            await logEvent(supabase, {
-              booking_id,
-              booking_group_id: booking.booking_group_id,
-              event_type: 'sms_fallback_failed',
-              metadata: { 
-                error: smsError
-              }
-            });
-          }
-        } else {
-          console.log('SMS fallback not configured or phone number missing');
-        }
-      } catch (smsError) {
-        console.error('SMS fallback error:', smsError);
+      } catch (emailError) {
+        console.error('Email sending exception:', emailError);
         await logEvent(supabase, {
           booking_id,
           booking_group_id: booking.booking_group_id,
-          event_type: 'sms_fallback_error',
-          metadata: { 
-            error: smsError instanceof Error ? smsError.message : 'Unknown error'
-          }
+          event_type: 'email_send_error',
+          error: emailError instanceof Error ? emailError.message : 'Unknown error'
         });
       }
+    } else {
+      console.warn('RESEND_API_KEY not configured - skipping email');
     }
 
     await logEvent(supabase, {
@@ -690,13 +511,14 @@ serve(async (req) => {
       metadata: { ticket_url }
     });
 
+    console.log('Ticket issue completed successfully');
     return new Response(
       JSON.stringify({ 
         success: true, 
         booking_id,
         ticket_url,
         qr_data: signedQR,
-        message: 'Ticket issued and emailed successfully'
+        message: 'Ticket issued successfully'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -705,8 +527,24 @@ serve(async (req) => {
     console.error('Error in issueTicket:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     
+    if (supabase && booking_id) {
+      try {
+        await logEvent(supabase, {
+          booking_id,
+          event_type: 'ticket_issue_error',
+          error: message
+        });
+      } catch (logError) {
+        console.error('Failed to log error:', logError);
+      }
+    }
+    
     return new Response(
-      JSON.stringify({ success: false, message }),
+      JSON.stringify({ 
+        success: false, 
+        message,
+        details: 'Check Supabase logs for more information'
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
