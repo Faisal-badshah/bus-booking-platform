@@ -121,14 +121,21 @@ serve(async (req: Request) => {
       );
     }
 
-    // Extract data
+    // Extract data - sanitize everything immediately
     const trip = Array.isArray(booking.trips) ? booking.trips[0] : booking.trips;
-    const route = Array.isArray(trip?.routes) ? trip.routes[0] : trip?.routes;
-    const bus = Array.isArray(trip?.buses) ? trip.buses[0] : trip?.buses;
-    const stops = route?.stops || [];
-
-    const from_stop = sanitizeForPDF(stops[booking.from_index] || "Unknown");
-    const to_stop = sanitizeForPDF(stops[booking.to_index] || "Unknown");
+    const rawRoute = Array.isArray(trip?.routes) ? trip.routes[0] : trip?.routes;
+    const rawBus = Array.isArray(trip?.buses) ? trip.buses[0] : trip?.buses;
+    
+    // Sanitize all data before using
+    const routeName = sanitizeForPDF(rawRoute?.name || "N/A");
+    const busName = sanitizeForPDF(rawBus?.name || "N/A");
+    const passengerName = sanitizeForPDF(booking.passenger_name);
+    const passengerEmail = sanitizeForPDF(booking.passenger_email);
+    const passengerPhone = sanitizeForPDF(booking.passenger_phone);
+    
+    const stops = (rawRoute?.stops || []).map(s => sanitizeForPDF(String(s)));
+    const from_stop = stops[booking.from_index] || "Unknown";
+    const to_stop = stops[booking.to_index] || "Unknown";
 
     // Generate QR payload
     const qrPayload = {
@@ -170,32 +177,34 @@ serve(async (req: Request) => {
 
     y -= 30;
 
-    // Helper to add field
+    // Helper to add field - sanitize both label and value
     const addField = (label: string, value: string) => {
-      page.drawText(label, { x: 50, y, size: 10, font: boldFont, color: rgb(0.3, 0.3, 0.3) });
-      page.drawText(sanitizeForPDF(value), { x: 200, y, size: 10, font, color: rgb(0, 0, 0) });
+      const cleanLabel = sanitizeForPDF(label);
+      const cleanValue = sanitizeForPDF(value);
+      page.drawText(cleanLabel, { x: 50, y, size: 10, font: boldFont, color: rgb(0.3, 0.3, 0.3) });
+      page.drawText(cleanValue, { x: 200, y, size: 10, font, color: rgb(0, 0, 0) });
       y -= 20;
     };
 
     // Booking info
     addField("Booking ID:", booking.id.substring(0, 18) + "...");
-    addField("Passenger:", booking.passenger_name);
-    addField("Email:", booking.passenger_email);
-    addField("Phone:", booking.passenger_phone);
+    addField("Passenger:", passengerName);
+    addField("Email:", passengerEmail);
+    addField("Phone:", passengerPhone);
 
     y -= 10;
     page.drawText("JOURNEY DETAILS", { x: 50, y, size: 14, font: boldFont, color: rgb(0, 0.4, 0.8) });
     y -= 25;
 
-    addField("Route:", route?.name || "N/A");
+    addField("Route:", routeName);
     addField("From:", from_stop);
     addField("To:", to_stop);
     addField("Date:", trip?.trip_date || "N/A");
     addField("Departure:", trip?.departure_time || "N/A");
     addField("Arrival:", trip?.arrival_time || "N/A");
-    addField("Bus:", bus?.name || "N/A");
-    addField("Seat:", `${booking.seat_number}`);
-    addField("Fare:", `INR ${booking.total_amount}`);
+    addField("Bus:", busName);
+    addField("Seat:", String(booking.seat_number));
+    addField("Fare:", "INR " + String(booking.total_amount));
 
     y -= 20;
 
@@ -264,18 +273,18 @@ serve(async (req: Request) => {
         await resend.emails.send({
           from: "Bus Booking <onboarding@resend.dev>",
           to: [booking.passenger_email],
-          subject: `🎫 Your Bus Ticket - ${sanitizeForPDF(route?.name || "Booking")}`,
+          subject: `Bus Ticket - ${sanitizeForPDF(route?.name || "Booking")}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-                <h1 style="margin: 0;">🎫 Your Ticket is Ready!</h1>
-                <p style="margin: 5px 0 0 0;">${booking.passenger_name}</p>
+                <h1 style="margin: 0;">Your Ticket is Ready!</h1>
+                <p style="margin: 5px 0 0 0;">${sanitizeForPDF(booking.passenger_name)}</p>
               </div>
               
               <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px;">
                 <h2 style="color: #667eea; margin-top: 0;">Booking Details</h2>
                 <p><strong>Route:</strong> ${sanitizeForPDF(route?.name || "N/A")}</p>
-                <p><strong>From:</strong> ${from_stop} → <strong>To:</strong> ${to_stop}</p>
+                <p><strong>From:</strong> ${from_stop} to ${to_stop}</p>
                 <p><strong>Date:</strong> ${trip?.trip_date || "N/A"}</p>
                 <p><strong>Departure:</strong> ${trip?.departure_time || "N/A"}</p>
                 <p><strong>Seat:</strong> <strong style="color: #667eea; font-size: 18px;">Seat ${booking.seat_number}</strong></p>
@@ -284,11 +293,11 @@ serve(async (req: Request) => {
                 <div style="background: #f8f9ff; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
                   <h3 style="color: #667eea; margin-top: 0;">QR Code for Boarding</h3>
                   <img src="${qrDataUrl}" alt="QR Code" style="max-width: 200px; margin: 10px 0;" />
-                  <p><a href="${ticket_url}" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 10px;">📄 Download PDF Ticket</a></p>
+                  <p><a href="${ticket_url}" style="display: inline-block; background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 10px;">Download PDF Ticket</a></p>
                 </div>
                 
                 <p style="color: #666; font-size: 14px;">
-                  <strong>⚠️ Important:</strong> Arrive 15 minutes before departure. Show this email or QR code at check-in.
+                  <strong>Important:</strong> Arrive 15 minutes before departure. Show this email or QR code at check-in.
                 </p>
               </div>
             </div>

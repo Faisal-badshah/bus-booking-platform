@@ -8,7 +8,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -67,7 +67,7 @@ serve(async (req) => {
 
       try {
         const ticketResult = await supabase.functions.invoke("issueTicket", {
-          body: { booking_id },
+          body: JSON.stringify({ booking_id }), // FIX: Stringify the body
         });
 
         console.log("Ticket generation result:", ticketResult);
@@ -78,7 +78,7 @@ serve(async (req) => {
             JSON.stringify({
               success: true,
               message: "Booking already confirmed, but ticket generation had issues",
-              ticket_error: ticketResult.error,
+              ticket_error: String(ticketResult.error),
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
@@ -133,7 +133,7 @@ serve(async (req) => {
     // Invoke ticket generation
     try {
       const ticketResult = await supabase.functions.invoke("issueTicket", {
-        body: { booking_id },
+        body: JSON.stringify({ booking_id }), // FIX: Stringify the body
       });
 
       console.log("Ticket generation result:", ticketResult);
@@ -146,7 +146,7 @@ serve(async (req) => {
             success: true,
             message: "Booking confirmed but ticket generation failed",
             booking_id,
-            ticket_error: ticketResult.error.message,
+            ticket_error: String(ticketResult.error),
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
