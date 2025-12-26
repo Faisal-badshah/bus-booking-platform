@@ -248,30 +248,29 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Stats - Minimal & Elegant */}
-        <section className="py-24 bg-gradient-to-r from-green-600 to-blue-700 text-white">
-          <div className="container mx-auto px-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-16 max-w-5xl mx-auto text-center">
-              {[
-                { value: "500+", label: "Daily Trips" },
-                { value: "10K+", label: "Happy Passengers" },
-                { value: "50+", label: "Modern Buses" },
-                { value: "24/7", label: "Support" },
-              ].map((stat, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.1 }}
-                >
-                  <div className="text-5xl md:text-6xl font-bold mb-4">{stat.value}</div>
-                  <p className="text-xl opacity-90">{stat.label}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
+       {/* Stats Section - Honest & Relatable */}
+<section className="py-24 bg-gradient-to-r from-green-600 to-blue-700 text-white">
+  <div className="container mx-auto px-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-16 max-w-5xl mx-auto text-center">
+      <div>
+        <div className="text-5xl md:text-6xl font-bold mb-4">20+</div>
+        <p className="text-xl opacity-90">Daily Trips</p>
+      </div>
+      <div>
+        <div className="text-5xl md:text-6xl font-bold mb-4">1K+</div>
+        <p className="text-xl opacity-90">Happy Passengers</p>
+      </div>
+      <div>
+        <div className="text-5xl md:text-6xl font-bold mb-4">8</div>
+        <p className="text-xl opacity-90">Modern Buses</p>
+      </div>
+      <div>
+        <div className="text-5xl md:text-6xl font-bold mb-4">24/7</div>
+        <p className="text-xl opacity-90">Support</p>
+      </div>
+    </div>
+  </div>
+</section>
 
         {/* Final CTA - Focused & Premium */}
         <section className="py-32 bg-gradient-to-br from-slate-900 to-blue-950 text-white">
