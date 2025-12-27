@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
+import { motion } from "framer-motion";
+import { Helmet } from "react-helmet-async";
+import { Loader2, Globe, Shield, Mail, Lock, User , Bus } from "lucide-react";
 
 const signUpSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -25,28 +30,81 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [language, setLanguage] = useState<"en" | "hi">("en");
   const navigate = useNavigate();
   const { toast } = useToast();
 
-useEffect(() => {
-  const handleMagicLink = async () => {
-    const hash = window.location.hash;
-
-    // Supabase sends tokens in the hash (#...)
-    if (hash.includes("access_token") || hash.includes("code")) {
-      await supabase.auth.exchangeCodeForSession(window.location.href);
-      navigate("/", { replace: true });
-      return;
-    }
-
-    // normal session check
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) navigate("/");
+  const toggleLanguage = () => {
+    setLanguage(prev => (prev === "en" ? "hi" : "en"));
   };
 
-  handleMagicLink();
-}, [navigate]);
+  const content = {
+    en: {
+      title: "Welcome - Ride Bus",
+      description: "Sign in or create an account to book your premium bus tickets.",
+      welcome: "Welcome to Ride Bus",
+      descriptionText: "Premium travel across Bihar — safe, comfortable, and reliable.",
+      login: "Login",
+      signUp: "Sign Up",
+      fullName: "Full Name",
+      email: "Email",
+      password: "Password",
+      loggingIn: "Logging in...",
+      loginButton: "Login",
+      creatingAccount: "Creating account...",
+      signUpButton: "Sign Up",
+      accountCreated: "Account created!",
+      welcomeMessage: "Welcome to Ride Bus. You can now book your tickets.",
+      welcomeBack: "Welcome back!",
+      loginSuccess: "You've successfully logged in.",
+      validationError: "Validation Error",
+      signUpFailed: "Sign up failed",
+      loginFailed: "Login failed",
+      pleaseTryAgain: "Please try again",
+      trustMessage: "Secure Authentication · Your Data Protected · Trusted by Thousands",
+    },
+    hi: {
+      title: "स्वागत है - राइड बस",
+      description: "अपनी प्रीमियम बस टिकट बुक करने के लिए साइन इन करें या नया अकाउंट बनाएं।",
+      welcome: "राइड बस में आपका स्वागत है",
+      descriptionText: "बिहार में प्रीमियम यात्रा — सुरक्षित, आरामदायक और विश्वसनीय।",
+      login: "लॉगिन",
+      signUp: "साइन अप",
+      fullName: "पूरा नाम",
+      email: "ईमेल",
+      password: "पासवर्ड",
+      loggingIn: "लॉगिन हो रहा है...",
+      loginButton: "लॉगिन",
+      creatingAccount: "अकाउंट बनाया जा रहा है...",
+      signUpButton: "साइन अप",
+      accountCreated: "अकाउंट बन गया!",
+      welcomeMessage: "राइड बस में स्वागत है। अब आप टिकट बुक कर सकते हैं।",
+      welcomeBack: "पुनः स्वागत है!",
+      loginSuccess: "आप सफलतापूर्वक लॉगिन हो गए हैं।",
+      validationError: "मान्यकरण त्रुटि",
+      signUpFailed: "साइन अप विफल",
+      loginFailed: "लॉगिन विफल",
+      pleaseTryAgain: "कृपया पुनः प्रयास करें",
+      trustMessage: "सुरक्षित प्रमाणीकरण · आपका डेटा सुरक्षित · हजारों का भरोसा",
+    }
+  }[language];
 
+  useEffect(() => {
+    const handleMagicLink = async () => {
+      const hash = window.location.hash;
+
+      if (hash.includes("access_token") || hash.includes("code")) {
+        await supabase.auth.exchangeCodeForSession(window.location.href);
+        navigate("/", { replace: true });
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) navigate("/");
+    };
+
+    handleMagicLink();
+  }, [navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,8 +128,8 @@ useEffect(() => {
 
       if (data.user) {
         toast({
-          title: "Account created!",
-          description: "Welcome to BusGo. You can now book your tickets.",
+          title: content.accountCreated,
+          description: content.welcomeMessage,
         });
         navigate("/");
       }
@@ -79,14 +137,14 @@ useEffect(() => {
       if (error instanceof z.ZodError) {
         toast({
           variant: "destructive",
-          title: "Validation Error",
+          title: content.validationError,
           description: error.errors[0].message,
         });
       } else {
         toast({
           variant: "destructive",
-          title: "Sign up failed",
-          description: error.message || "Please try again",
+          title: content.signUpFailed,
+          description: error.message || content.pleaseTryAgain,
         });
       }
     } finally {
@@ -110,8 +168,8 @@ useEffect(() => {
 
       if (data.user) {
         toast({
-          title: "Welcome back!",
-          description: "You've successfully logged in.",
+          title: content.welcomeBack,
+          description: content.loginSuccess,
         });
         navigate("/");
       }
@@ -119,14 +177,14 @@ useEffect(() => {
       if (error instanceof z.ZodError) {
         toast({
           variant: "destructive",
-          title: "Validation Error",
+          title: content.validationError,
           description: error.errors[0].message,
         });
       } else {
         toast({
           variant: "destructive",
-          title: "Login failed",
-          description: error.message || "Please check your credentials",
+          title: content.loginFailed,
+          description: error.message || content.pleaseTryAgain,
         });
       }
     } finally {
@@ -135,94 +193,148 @@ useEffect(() => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-secondary/30">
-      <Card className="w-full max-w-md shadow-soft">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">Welcome to BusGo</CardTitle>
-          <CardDescription className="text-center">
-            Sign in to book your tickets or create a new account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
+    <>
+      <Helmet>
+        <title>{content.title}</title>
+        <meta name="description" content={content.description} />
+      </Helmet>
 
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+      <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-950">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="w-full max-w-md"
+        >
+          <Card className="shadow-2xl border-none bg-white dark:bg-slate-900">
+            <CardHeader className="text-center space-y-4 pb-8">
+              <div className="flex justify-center mb-4">
+                <div className="p-4 bg-green-100 dark:bg-green-900/50 rounded-full">
+                  <Bus className="h-12 w-12 text-green-600 dark:text-green-400" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Logging in..." : "Login"}
-                </Button>
-              </form>
-            </TabsContent>
+              </div>
+              <CardTitle className="text-3xl font-bold">{content.welcome}</CardTitle>
+              <CardDescription className="text-base">{content.descriptionText}</CardDescription>
+              <Button variant="ghost" size="icon" onClick={toggleLanguage} className="absolute top-4 right-4">
+                <Globe className="h-5 w-5" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="login" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-8">
+                  <TabsTrigger value="login">{content.login}</TabsTrigger>
+                  <TabsTrigger value="signup">{content.signUp}</TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={loading}>
-                  {loading ? "Creating account..." : "Sign Up"}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+                <TabsContent value="login" className="space-y-6">
+                  <form onSubmit={handleLogin} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email" className="text-base flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        {content.email}
+                      </Label>
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="your@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password" className="text-base flex items-center gap-2">
+                        <Lock className="h-4 w-4" />
+                        {content.password}
+                      </Label>
+                      <Input
+                        id="login-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full h-12 text-lg bg-green-600 hover:bg-green-700" disabled={loading}>
+                      {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+                      {loading ? content.loggingIn : content.loginButton}
+                    </Button>
+                  </form>
+                </TabsContent>
+
+                <TabsContent value="signup" className="space-y-6">
+                  <form onSubmit={handleSignUp} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name" className="text-base flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        {content.fullName}
+                      </Label>
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        placeholder="John Doe"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email" className="text-base flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        {content.email}
+                      </Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="your@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password" className="text-base flex items-center gap-2">
+                        <Lock className="h-4 w-4" />
+                        {content.password}
+                      </Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full h-12 text-lg bg-green-600 hover:bg-green-700" disabled={loading}>
+                      {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+                      {loading ? content.creatingAccount : content.signUpButton}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="mt-8 text-center"
+              >
+                <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+                  <Shield className="h-4 w-4 text-green-600" />
+                  {content.trustMessage}
+                </p>
+              </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </>
   );
-} 
+}
