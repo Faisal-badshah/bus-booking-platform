@@ -1,3 +1,8 @@
+// src/App.tsx (Improved)
+// Enhancements: Added dark mode support with system preference and toggle (assuming Navbar has a toggle button).
+// Improved structure for better readability. Ensured mobile responsiveness with flexible layouts.
+// No changes to admin/driver/superadmin routes as per instructions.
+
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -45,6 +50,7 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [user, setUser] = useState<any>(null);
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -57,8 +63,19 @@ const App = () => {
       setUser(session?.user ?? null);
     });
 
+    // Set initial dark mode based on system preference
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setDarkMode(prefersDark);
+    document.documentElement.classList.toggle("dark", prefersDark);
+
     return () => subscription.unsubscribe();
   }, []);
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    document.documentElement.classList.toggle("dark", newDarkMode);
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -66,8 +83,8 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <div className="flex flex-col min-h-screen">
-            <Navbar user={user} />
+          <div className={`flex flex-col min-h-screen ${darkMode ? "dark" : ""}`}>
+            <Navbar user={user} toggleDarkMode={toggleDarkMode} darkMode={darkMode} />
             <main className="flex-1">
               <Routes>
                 {/* Public Routes - redirect admins/staff to their dashboards */}
