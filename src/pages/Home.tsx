@@ -129,17 +129,17 @@ export default function Home() {
       </Helmet>
 
       {/* Navigation Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-100 shadow-sm">
-        <nav className="container mx-auto px-6 py-5">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
+        <nav className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-4">
-              <Bus className="h-10 w-10 text-green-600" aria-hidden="true" />
-              <span className="text-3xl font-bold tracking-tight text-slate-900">
+            <Link to="/" className="flex items-center gap-2">
+              <Bus className="h-8 w-8 text-green-600" aria-hidden="true" />
+              <span className="text-2xl font-semibold tracking-tight text-slate-900">
                 RIDE <span className="text-green-600">BUS</span>
               </span>
             </Link>
 
-            <div className="hidden md:flex items-center gap-12">
+            <div className="hidden md:flex items-center gap-8">
               <Link to="/" className="text-slate-600 hover:text-green-600 font-medium transition-colors">
                 Home
               </Link>
@@ -157,7 +157,7 @@ export default function Home() {
               </Link>
             </div>
 
-            <div className="hidden md:flex items-center gap-5">
+            <div className="hidden md:flex items-center gap-4">
               <Button variant="ghost" size="sm" className="font-medium">
                 Login
               </Button>
@@ -187,11 +187,11 @@ export default function Home() {
         transition={{ duration: 0.3 }}
         className="fixed top-0 right-0 h-full w-3/4 bg-white z-50 md:hidden overflow-y-auto"
       >
-        <div className="p-6">
-          <Button variant="ghost" size="icon" className="mb-8" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close Menu">
+        <div className="p-4">
+          <Button variant="ghost" size="icon" className="mb-6" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close Menu">
             <X className="h-6 w-6" />
           </Button>
-          <nav className="flex flex-col gap-6">
+          <nav className="flex flex-col gap-4">
             <Link to="/" className="text-slate-600 hover:text-green-600 font-medium" onClick={() => setIsMobileMenuOpen(false)}>
               Home
             </Link>
@@ -207,13 +207,13 @@ export default function Home() {
             <Link to="/contact" className="text-slate-600 hover:text-green-600 font-medium" onClick={() => setIsMobileMenuOpen(false)}>
               Contact
             </Link>
-            <Button variant="ghost" className="font-medium">
+            <Button variant="ghost" className="font-medium justify-start">
               Login
             </Button>
             <Button className="bg-green-600 hover:bg-green-700 text-white font-medium">
               Sign Up
             </Button>
-            <Button variant="ghost" onClick={toggleLanguage} className="flex items-center gap-2">
+            <Button variant="ghost" onClick={toggleLanguage} className="flex items-center gap-2 justify-start">
               <Globe className="h-5 w-5" />
               {language === "en" ? "हिंदी" : "English"}
             </Button>
@@ -224,56 +224,54 @@ export default function Home() {
       {/* Overlay for Mobile Menu */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/30 z-40 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Main Content */}
-      <div className="pt-24 bg-gray-50">
+      <div className="pt-16 bg-white">
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white py-40 lg:py-52 overflow-hidden" style={{ backgroundImage: "url('https://assets.volvo.com/is/image/VolvoInformationTechnologyAB/Interior-bus?qlt=82&wid=1920&fit=constrain')", backgroundBlendMode: "multiply", backgroundSize: "cover" }}>
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2sy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnptMCAyYy0yLjIxIDAtNCAxLjc5LTQgNHMxLjc5IDQgNCA0IDQtMS43OSA0LTQtMS43OS00LTQtNHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA0Ii8+PC9nPjwvc3ZnPg==')] opacity-10"></div>
+        <section className="relative bg-gradient-to-br from-slate-50 to-gray-100 text-slate-900 py-32 lg:py-48 overflow-hidden" style={{ backgroundImage: "url('https://assets.volvo.com/is/image/VolvoInformationTechnologyAB/Interior-bus?qlt=82&wid=1920&fit=constrain')", backgroundBlendMode: "soft-light", backgroundSize: "cover", backgroundPosition: "center" }}>
+          <div className="absolute inset-0 bg-white/10"></div>
 
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="container mx-auto px-6 relative z-10"
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="container mx-auto px-4 relative z-10"
           >
-            <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6">
-                RIDE <span className="text-green-400">BUS</span>
+            <div className="max-w-3xl mx-auto text-center">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight mb-4">
+                RIDE <span className="text-green-600">BUS</span>
               </h1>
-              <p className="text-2xl sm:text-3xl md:text-4xl font-light text-green-300 mb-8 tracking-wide">
+              <p className="text-xl sm:text-2xl font-light text-slate-700 mb-6 tracking-wide">
                 {content.heroTagline}
               </p>
-              <p className="text-xl md:text-2xl max-w-3xl mx-auto opacity-90 leading-relaxed mb-16">
+              <p className="text-lg md:text-xl max-w-2xl mx-auto text-slate-600 mb-12 leading-relaxed">
                 {content.heroDesc}
               </p>
 
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.8 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
               >
                 <Link to="/book">
                   <Button
                     size="lg"
-                    className="bg-green-600 hover:bg-green-700 text-white px-14 py-8 text-2xl font-semibold rounded-2xl shadow-2xl hover:shadow-green-600/30 transition-all duration-300 hover:-translate-y-1"
+                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg font-medium rounded-md shadow-md hover:shadow-lg transition-all duration-300"
                   >
-                    <Ticket className="mr-4 h-8 w-8" />
+                    <Ticket className="mr-2 h-5 w-5" />
                     {content.ctaBook}
                   </Button>
                 </Link>
               </motion.div>
-              <p className="mt-6 text-sm opacity-70">
+              <p className="mt-4 text-sm text-slate-500">
                 {content.trustMessage}
               </p>
             </div>
           </motion.div>
-
-          <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-gray-50 to-transparent" />
         </section>
 
         {/* Popular Routes */}
@@ -281,14 +279,14 @@ export default function Home() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ duration: 1 }}
-          className="py-32 bg-white"
+          transition={{ duration: 0.8 }}
+          className="py-24 bg-white"
         >
-          <div className="container mx-auto px-6">
-            <h2 className="text-4xl md:text-5xl font-bold text-center text-slate-800 mb-16">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl md:text-4xl font-semibold text-center text-slate-800 mb-12">
               {content.popularRoutes}
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-16 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 max-w-6xl mx-auto">
               {[
                 { from: "Siwan", to: "Raxaul" },
                 { from: "Siwan", to: "Motihari" },
@@ -297,22 +295,22 @@ export default function Home() {
               ].map((route, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.1 }}
                   className="text-center"
                 >
-                  <div className="text-6xl mb-6 text-green-600">
+                  <div className="text-4xl mb-4 text-green-600">
                     🚌
                   </div>
-                  <p className="text-2xl font-semibold text-slate-800 mb-3">{route.from}</p>
-                  <div className="flex items-center justify-center my-4 opacity-80">
-                    <div className="h-px w-20 bg-gray-300"></div>
-                    <MapPin className="h-5 w-5 text-green-600 mx-4" />
-                    <div className="h-px w-20 bg-gray-300"></div>
+                  <p className="text-xl font-medium text-slate-800 mb-2">{route.from}</p>
+                  <div className="flex items-center justify-center my-2 opacity-70">
+                    <div className="h-px w-12 bg-gray-200"></div>
+                    <MapPin className="h-4 w-4 text-green-600 mx-2" />
+                    <div className="h-px w-12 bg-gray-200"></div>
                   </div>
-                  <p className="text-2xl font-semibold text-slate-800">{route.to}</p>
+                  <p className="text-xl font-medium text-slate-800">{route.to}</p>
                 </motion.div>
               ))}
             </div>
@@ -324,34 +322,34 @@ export default function Home() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="py-32 bg-gray-50"
+          className="py-24 bg-gray-50"
         >
-          <div className="container mx-auto px-6">
-            <div className="text-center mb-20 max-w-4xl mx-auto">
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-800 mb-6">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16 max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-semibold text-slate-800 mb-4">
                 {content.whyChoose}
               </h2>
-              <p className="text-xl text-slate-600">
+              <p className="text-lg text-slate-600">
                 {content.whyDesc}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {content.features.map((feature, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.1 }}
                 >
-                  <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-3xl h-full">
-                    <CardContent className="p-10 text-center">
-                      <div className={`w-20 h-20 bg-gradient-to-br ${feature.color} rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl`}>
-                        <feature.icon className="h-10 w-10 text-white" />
+                  <Card className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-lg h-full">
+                    <CardContent className="p-6 text-center">
+                      <div className={`w-16 h-16 bg-gradient-to-br ${feature.color} rounded-full flex items-center justify-center mx-auto mb-6 shadow-md`}>
+                        <feature.icon className="h-8 w-8 text-white" />
                       </div>
-                      <h3 className="text-2xl md:text-3xl font-bold text-slate-800 mb-4">{feature.title}</h3>
-                      <p className="text-slate-600 leading-relaxed text-lg">{feature.desc}</p>
+                      <h3 className="text-xl font-medium text-slate-800 mb-2">{feature.title}</h3>
+                      <p className="text-slate-600 leading-relaxed text-base">{feature.desc}</p>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -361,31 +359,31 @@ export default function Home() {
         </motion.section>
 
         {/* Testimonials */}
-        <section className="py-32 bg-white">
-          <div className="container mx-auto px-6">
-            <h2 className="text-4xl md:text-5xl font-bold text-center text-slate-800 mb-16">
+        <section className="py-24 bg-white">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl md:text-4xl font-semibold text-center text-slate-800 mb-12">
               {content.passengerStories}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
               {content.testimonials.map((t, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: idx * 0.15 }}
+                  transition={{ delay: idx * 0.1 }}
                 >
-                  <Card className="border-0 shadow-md hover:shadow-xl transition-shadow duration-300 h-full">
-                    <CardContent className="p-10">
-                      <div className="flex justify-center mb-6">
+                  <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 h-full rounded-lg">
+                    <CardContent className="p-6">
+                      <div className="flex justify-center mb-4">
                         {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="h-6 w-6 text-yellow-500 fill-current" />
+                          <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
                         ))}
                       </div>
-                      <p className="text-slate-700 text-lg italic leading-relaxed mb-8">"{t.text}"</p>
+                      <p className="text-slate-600 text-base italic leading-relaxed mb-6">"{t.text}"</p>
                       <div className="text-center">
-                        <p className="font-semibold text-slate-900 text-lg">{t.name}</p>
-                        <p className="text-slate-500">{t.location}</p>
+                        <p className="font-medium text-slate-800">{t.name}</p>
+                        <p className="text-sm text-slate-500">{t.location}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -396,19 +394,19 @@ export default function Home() {
         </section>
 
         {/* Stats */}
-        <section className="py-28 bg-gradient-to-r from-green-600 to-blue-700 text-white">
-          <div className="container mx-auto px-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-16 max-w-5xl mx-auto text-center">
+        <section className="py-20 bg-gradient-to-r from-green-50 to-blue-50 text-slate-900">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-12 max-w-4xl mx-auto text-center">
               {content.stats.map((stat, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.1 }}
                 >
-                  <div className="text-5xl md:text-6xl font-bold mb-4">{stat.value}</div>
-                  <p className="text-xl opacity-90">{stat.label}</p>
+                  <div className="text-4xl font-semibold mb-2">{stat.value}</div>
+                  <p className="text-base text-slate-600">{stat.label}</p>
                 </motion.div>
               ))}
             </div>
@@ -416,51 +414,51 @@ export default function Home() {
         </section>
 
         {/* Final CTA */}
-        <section className="py-32 bg-gradient-to-br from-slate-900 to-blue-950 text-white">
+        <section className="py-24 bg-gray-50">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="container mx-auto px-6 text-center"
+            className="container mx-auto px-4 text-center"
           >
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8">
+            <h2 className="text-3xl md:text-4xl font-semibold mb-4 text-slate-800">
               {content.finalCtaTitle}
             </h2>
-            <p className="text-xl md:text-2xl mb-12 max-w-3xl mx-auto opacity-90">
+            <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto text-slate-600">
               {content.finalCtaDesc}
             </p>
             <Link to="/book">
               <Button
                 size="lg"
-                className="bg-green-600 hover:bg-green-700 text-white px-16 py-9 text-2xl font-semibold rounded-3xl shadow-2xl hover:shadow-green-600/40 transition-all duration-500 hover:-translate-y-1"
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg font-medium rounded-md shadow-md hover:shadow-lg transition-all duration-300"
               >
-                <Ticket className="mr-4 h-8 w-8" />
+                <Ticket className="mr-2 h-5 w-5" />
                 {content.finalCtaButton}
               </Button>
             </Link>
-            <p className="mt-6 text-sm opacity-70">
+            <p className="mt-4 text-sm text-slate-500">
               {content.trustMessage}
             </p>
           </motion.div>
         </section>
 
         {/* Footer */}
-        <footer className="bg-slate-900 text-white py-16">
-          <div className="container mx-auto px-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+        <footer className="bg-slate-900 text-white py-12">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
               <div>
-                <div className="flex items-center gap-4 mb-6">
-                  <Bus className="h-10 w-10 text-green-500" />
-                  <span className="text-3xl font-bold">RIDE BUS</span>
+                <div className="flex items-center gap-2 mb-4">
+                  <Bus className="h-8 w-8 text-green-500" />
+                  <span className="text-2xl font-semibold">RIDE BUS</span>
                 </div>
-                <p className="text-slate-400 leading-relaxed">
+                <p className="text-slate-400 text-sm leading-relaxed">
                   {content.footerBrandDesc}
                 </p>
               </div>
 
               <div>
-                <h3 className="font-bold text-xl mb-6">{content.footerQuickLinks}</h3>
-                <ul className="space-y-3 text-slate-400">
+                <h3 className="font-semibold text-lg mb-4">{content.footerQuickLinks}</h3>
+                <ul className="space-y-2 text-slate-400 text-sm">
                   <li><Link to="/" className="hover:text-green-400 transition">Home</Link></li>
                   <li><Link to="/about" className="hover:text-green-400 transition">About Us</Link></li>
                   <li><Link to="/services" className="hover:text-green-400 transition">Services</Link></li>
@@ -470,26 +468,26 @@ export default function Home() {
               </div>
 
               <div>
-                <h3 className="font-bold text-xl mb-6">{content.footerContact}</h3>
-                <ul className="space-y-4 text-slate-400">
-                  <li className="flex items-center gap-3"><Phone className="h-5 w-5" /> +91 98765 43210</li>
-                  <li className="flex items-center gap-3"><Mail className="h-5 w-5" /> support@ridebus.in</li>
-                  <li className="flex items-center gap-3"><MapPinned className="h-5 w-5" /> Patna, Bihar, India</li>
+                <h3 className="font-semibold text-lg mb-4">{content.footerContact}</h3>
+                <ul className="space-y-2 text-slate-400 text-sm">
+                  <li className="flex items-center gap-2"><Phone className="h-4 w-4" /> +91 98765 43210</li>
+                  <li className="flex items-center gap-2"><Mail className="h-4 w-4" /> support@ridebus.in</li>
+                  <li className="flex items-center gap-2"><MapPinned className="h-4 w-4" /> Patna, Bihar, India</li>
                 </ul>
               </div>
 
               <div>
-                <h3 className="font-bold text-xl mb-6">{content.footerFollow}</h3>
-                <div className="flex gap-5">
-                  <a href="#" aria-label="Facebook" className="hover:text-green-400 transition"><Facebook className="h-7 w-7" /></a>
-                  <a href="#" aria-label="Twitter" className="hover:text-green-400 transition"><Twitter className="h-7 w-7" /></a>
-                  <a href="#" aria-label="Instagram" className="hover:text-green-400 transition"><Instagram className="h-7 w-7" /></a>
-                  <a href="#" aria-label="YouTube" className="hover:text-green-400 transition"><Youtube className="h-7 w-7" /></a>
+                <h3 className="font-semibold text-lg mb-4">{content.footerFollow}</h3>
+                <div className="flex gap-4">
+                  <a href="#" aria-label="Facebook" className="hover:text-green-400 transition"><Facebook className="h-5 w-5" /></a>
+                  <a href="#" aria-label="Twitter" className="hover:text-green-400 transition"><Twitter className="h-5 w-5" /></a>
+                  <a href="#" aria-label="Instagram" className="hover:text-green-400 transition"><Instagram className="h-5 w-5" /></a>
+                  <a href="#" aria-label="YouTube" className="hover:text-green-400 transition"><Youtube className="h-5 w-5" /></a>
                 </div>
               </div>
             </div>
 
-            <div className="border-t border-slate-800 pt-8 text-center text-slate-400">
+            <div className="border-t border-slate-800 pt-6 text-center text-slate-400 text-sm">
               <p>{content.footerCopyright}</p>
             </div>
           </div>
