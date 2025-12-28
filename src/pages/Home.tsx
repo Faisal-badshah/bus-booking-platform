@@ -120,47 +120,65 @@ const { language } = useLanguage();
       {/* Main Content - Removed custom navbar to avoid override, relying on global Navbar */}
       <div className="bg-white dark:bg-slate-900">
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700 text-slate-900 dark:text-slate-200 py-32 lg:py-48 overflow-hidden" style={{ backgroundImage: "url('https://assets.volvo.com/is/image/VolvoInformationTechnologyAB/Interior-bus?qlt=82&wid=1920&fit=constrain')", backgroundBlendMode: "soft-light", backgroundSize: "cover", backgroundPosition: "center" }}>
-          <div className="absolute inset-0 bg-white/5 dark:bg-black/5"></div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="container mx-auto px-4 relative z-10"
-          >
-            <div className="max-w-3xl mx-auto text-center">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight mb-4">
-                RIDE <span className="text-green-600 dark:text-green-400">BUS</span>
-              </h1>
-              <p className="text-xl sm:text-2xl font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
-                {content.heroTagline}
-              </p>
-              <p className="text-lg md:text-xl max-w-2xl mx-auto text-slate-600 dark:text-slate-400 mb-12 leading-relaxed">
-                {content.heroDesc}
-              </p>
 
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" }}
-              >
-                <Link to="/book">
-                  <Button
-                    size="lg"
-                    className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-8 py-6 text-lg font-medium rounded-md shadow-md hover:shadow-lg transition-all duration-300"
-                  >
-                    <Ticket className="mr-2 h-5 w-5" />
-                    {content.ctaBook}
-                  </Button>
-                </Link>
-              </motion.div>
-              <p className="mt-4 text-sm text-slate-500 dark:text-slate-500">
-                {content.trustMessage}
-              </p>
-            </div>
-          </motion.div>
-        </section>
+<section className="relative h-screen flex items-center justify-center overflow-hidden">
+  {/* Video Background - Multiple Formats + Poster */}
+  <video
+    autoPlay
+    muted
+    loop
+    playsInline
+    poster="/images/hero-poster.jpg" 
+    className="absolute inset-0 w-full h-full object-cover"
+    preload="metadata"
+  >
+    <source src="/videos/ridebus-hero.webm" type="video/webm" />
+    <source src="/videos/ridebus-hero.mp4" type="video/mp4" />
+    Your browser does not support the video tag.
+  </video>
+
+  {/* Subtle dark overlay for text contrast */}
+  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+
+  {/* Hero Content */}
+  <motion.div
+    initial={{ opacity: 0, y: 40 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 1, ease: "easeOut" }}
+    className="relative z-10 text-center text-white px-6 max-w-5xl mx-auto"
+  >
+    <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-6 drop-shadow-2xl leading-tight">
+      RIDE <span className="text-green-400">BUS</span>
+    </h1>
+    <p className="text-2xl sm:text-3xl md:text-4xl mb-8 font-light drop-shadow-lg">
+      {content.heroTagline}
+    </p>
+    <p className="text-lg sm:text-xl md:text-2xl mb-12 max-w-3xl mx-auto opacity-95 drop-shadow leading-relaxed px-4">
+      {content.heroDesc}
+    </p>
+
+    <Link to="/book">
+      <Button
+        size="lg"
+        className="bg-green-600 hover:bg-green-700 text-white px-12 py-8 text-2xl font-semibold rounded-2xl shadow-2xl hover:shadow-green-500/50 transition-all duration-500 hover:scale-105"
+      >
+        <Ticket className="mr-4 h-8 w-8" />
+        {content.ctaBook}
+      </Button>
+    </Link>
+
+    <motion.p 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.6 }}
+      className="mt-8 text-base opacity-90 flex items-center justify-center gap-2"
+    >
+      <Shield className="h-5 w-5 text-green-400" />
+      {content.trustMessage}
+    </motion.p>
+  </motion.div>
+</section>
 
         {/* Trust Badges Section */}
         <motion.section
