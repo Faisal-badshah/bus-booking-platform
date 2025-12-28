@@ -1,5 +1,5 @@
 'use client';
-
+import { useLanguage } from '../context/LanguageContext';
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,8 @@ import { motion } from "framer-motion";
 import { Helmet } from "react-helmet-async";
 
 export default function Home() {
-  const [language, setLanguage] = useState<"en" | "hi">("en");
 
-  const toggleLanguage = () => {
-    setLanguage(prev => (prev === "en" ? "hi" : "en"));
-  };
+const { language } = useLanguage();
 
   const content = {
     en: {

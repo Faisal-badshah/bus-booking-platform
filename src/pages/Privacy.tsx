@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from "react";
+import { useLanguage } from '../context/LanguageContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -9,11 +10,8 @@ import { Globe, Shield, ChevronUp } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function Privacy() {
-  const [language, setLanguage] = useState<"en" | "hi">("en");
 
-  const toggleLanguage = () => {
-    setLanguage(prev => (prev === "en" ? "hi" : "en"));
-  };
+  const { language } = useLanguage();
 
   const content = {
     en: {
@@ -193,18 +191,11 @@ export default function Privacy() {
               <h1 id="privacy-heading" className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground">
                 Privacy Policy
               </h1>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={toggleLanguage} 
-                aria-label={language === "en" ? "Switch to Hindi" : "Switch to English"}
-                className="rounded-full focus-visible:ring-2 focus-visible:ring-green-600"
-              >
+             
                 <Globe className="h-5 w-5" aria-hidden="true" />
                 <span className="sr-only">{language === "en" ? "हिंदी" : "English"}</span>
-              </Button>
             </header>
-
+    
             <p className="text-sm text-muted-foreground text-center mb-4">
               {content.lastUpdated}: {new Date().toLocaleDateString()}
             </p>
