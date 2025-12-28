@@ -2,7 +2,7 @@
 // Enhancements: Added dark mode support with system preference and toggle (assuming Navbar has a toggle button).
 // Improved structure for better readability. Ensured mobile responsiveness with flexible layouts.
 // No changes to admin/driver/superadmin routes as per instructions.
-
+import { LanguageProvider } from './context/LanguageContext';
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -82,6 +82,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <LanguageProvider>
         <BrowserRouter>
           <div className={`flex flex-col min-h-screen ${darkMode ? "dark" : ""}`}>
             <Navbar user={user} toggleDarkMode={toggleDarkMode} darkMode={darkMode} />
@@ -248,6 +249,7 @@ const App = () => {
             <Footer />
           </div>
         </BrowserRouter>
+        </LanguageProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

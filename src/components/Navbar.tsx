@@ -1,3 +1,4 @@
+import { useLanguage } from '../context/LanguageContext';
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Bus, Menu, X, User, LogOut, LayoutDashboard, Globe, Sun, Moon } from "lucide-react";
@@ -15,14 +16,11 @@ interface NavbarProps {
 
 export const Navbar = ({ user, toggleDarkMode, darkMode }: NavbarProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [language, setLanguage] = useState<"en" | "hi">("en");
+  const { language, toggleLanguage } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { role, loading } = useUserRole();
 
-  const toggleLanguage = () => {
-    setLanguage(prev => (prev === "en" ? "hi" : "en"));
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
