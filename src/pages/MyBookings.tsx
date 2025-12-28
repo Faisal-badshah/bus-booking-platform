@@ -1,3 +1,4 @@
+import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,13 +36,10 @@ export default function MyBookings() {
   const [bookingGroups, setBookingGroups] = useState<BookingGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [trackingEnabled, setTrackingEnabled] = useState(false);
-  const [language, setLanguage] = useState<"en" | "hi">("en");
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const toggleLanguage = () => {
-    setLanguage(prev => (prev === "en" ? "hi" : "en"));
-  };
 
   const content = {
     en: {
@@ -290,9 +288,7 @@ export default function MyBookings() {
           >
             <div className="flex items-center justify-between mb-8">
               <h1 className="text-3xl sm:text-4xl font-bold text-foreground">{content.myBookings}</h1>
-              <Button variant="ghost" size="icon" onClick={toggleLanguage} aria-label="Toggle Language">
-                <Globe className="h-5 w-5" />
-              </Button>
+
             </div>
 
             <motion.p 

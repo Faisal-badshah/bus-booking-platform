@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 'use client';
-
+import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,7 +49,6 @@ export default function BookTickets() {
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(1);
   const [userId, setUserId] = useState<string | null>(null);
-  const [language, setLanguage] = useState<"en" | "hi">("en");
   
   // Step 1: Select stops and date
   const [allStops, setAllStops] = useState<string[]>([]);
@@ -84,10 +83,7 @@ export default function BookTickets() {
   const [paymentMode, setPaymentMode] = useState<'offline' | 'online' | 'hybrid'>('offline');
   const [forceOnlinePayment, setForceOnlinePayment] = useState(false);
   const [useRealGateway, setUseRealGateway] = useState(false);
-
-  const toggleLanguage = () => {
-    setLanguage(prev => (prev === "en" ? "hi" : "en"));
-  };
+const { language } = useLanguage();
 
   const content = {
     en: {
@@ -863,9 +859,6 @@ export default function BookTickets() {
           className="flex justify-between items-center mb-8"
         >
           <h1 className="text-3xl sm:text-4xl font-semibold text-foreground">{content.title}</h1>
-          <Button variant="ghost" size="icon" onClick={toggleLanguage} aria-label="Toggle Language">
-            <Globe className="h-5 w-5 text-foreground" />
-          </Button>
         </motion.div>
 
         <motion.p 
