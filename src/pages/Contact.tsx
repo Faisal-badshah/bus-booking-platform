@@ -1,5 +1,5 @@
 'use client';
-
+import { useLanguage } from '../context/LanguageContext';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,13 +34,11 @@ export default function Contact() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [language, setLanguage] = useState<"en" | "hi">("en");
+  
   const { toast } = useToast();
 
-  const toggleLanguage = () => {
-    setLanguage(prev => (prev === "en" ? "hi" : "en"));
-  };
-
+const { language } = useLanguage();
+ 
   const content = {
     en: {
       title: "Contact Us - Ride Bus",
@@ -165,9 +163,7 @@ export default function Contact() {
           >
             <div className="flex items-center justify-between mb-8">
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground">{content.contactUs}</h1>
-              <Button variant="ghost" size="icon" onClick={toggleLanguage} aria-label="Toggle Language">
-                <Globe className="h-5 w-5" />
-              </Button>
+            
             </div>
 
             <p className="text-lg sm:text-xl text-muted-foreground text-center mb-8">{content.haveQuestions}</p>
