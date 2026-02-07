@@ -126,6 +126,7 @@ export default function Auth() {
 
       if (error) throw error;
 
+<<<<<<< HEAD
       if (data.user) {
         toast({
           title: content.accountCreated,
@@ -133,6 +134,29 @@ export default function Auth() {
         });
         navigate("/");
       }
+=======
+      if (data.user && !data.session) {
+  // Email confirmation required
+  toast({
+    title: "Verification email sent",
+    description: "Please check your inbox and verify your email before logging in.",
+  });
+
+  navigate("/check-email");
+ // or later we will make /check-email
+}
+
+if (data.session) {
+  // Auto-login case (if email confirmation disabled)
+  toast({
+    title: "Welcome!",
+    description: "Account created and logged in.",
+  });
+
+  navigate("/");
+}
+
+>>>>>>> aded3a7 (fix from phase 1 to 4 to improve sign up)
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast({
@@ -164,7 +188,19 @@ export default function Auth() {
         password: validated.password,
       });
 
-      if (error) throw error;
+      if (error) {
+  if (error.message.includes("Email not confirmed")) {
+    toast({
+      variant: "destructive",
+      title: "Email not verified",
+      description: "Please check your inbox and verify your email first.",
+    });
+    return;
+  }
+
+  throw error;
+}
+
 
       if (data.user) {
         toast({

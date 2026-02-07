@@ -19,7 +19,9 @@ import About from "./pages/About";
 import Services from "./pages/Services";
 import BookTickets from "./pages/BookTickets";
 import MyBookings from "./pages/MyBookings";
+import CheckEmail from "./pages/CheckEmail";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import StaffLogin from "./pages/StaffLogin";
 import Contact from "./pages/Contact";
 import Terms from "./pages/Terms";
@@ -122,6 +124,8 @@ const App = () => {
                 
                 {/* Auth Routes - accessible to guests and users */}
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/check-email" element={<CheckEmail />} />
                 <Route path="/staff-login" element={<StaffLogin />} />
                 
                 {/* User Routes - only for regular users */}
