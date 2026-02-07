@@ -190,7 +190,7 @@ export default function Bookings() {
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         {booking.trips?.trip_date &&
-                          format(new Date(booking.trips.trip_date), "MMM dd, yyyy")}
+                          format(new Date(booking.trip_date), "MMM dd, yyyy")}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">{booking.seat_numbers.join(", ")}</TableCell>
                       <TableCell>₹{booking.total_amount}</TableCell>

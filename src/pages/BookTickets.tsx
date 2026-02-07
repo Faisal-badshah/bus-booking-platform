@@ -295,7 +295,7 @@ const { language } = useLanguage();
           route.stops.forEach((stop: string) => uniqueStops.add(stop));
         }
       });
-      setAllStops(Array.from(uniqueStops).sort());
+      setAllStops(Array.from(uniqueStops));
     }
   };
 
@@ -329,7 +329,8 @@ const { language } = useLanguage();
         }
       });
       
-      setAvailableToStops(Array.from(possibleToStops).sort());
+      setAvailableToStops(Array.from(possibleToStops));
+
     }
   };
 
@@ -526,7 +527,7 @@ const { language } = useLanguage();
           seat_numbers: selectedSeats,
           from_stop: fromStop,
           to_stop: toStop,
-          trip_date: selectedTrip.trip_date,
+          trip_date: selectedDate,  
           passengers: passengersData
         }
       });
