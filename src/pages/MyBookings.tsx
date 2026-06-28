@@ -325,6 +325,11 @@ export default function MyBookings() {
                   const hasTicket = group.bookings.some(b => b.ticket_url);
                   const firstTicketUrl = group.bookings.find(b => b.ticket_url)?.ticket_url;
 
+                  // Use the passenger's chosen travel date (booking_date), not the
+                  // trip's legacy date field (V1).
+                  const firstBooking = group.bookings[0];
+                  const travelDate = firstBooking?.booking_date || trip?.trip_date;
+
                   return (
                     <motion.div
                       key={group.booking_group_id}
@@ -357,7 +362,7 @@ export default function MyBookings() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div>
                               <p className="text-sm text-muted-foreground">{content.travelDate}</p>
-                              <p className="text-lg font-medium">{format(new Date(trip?.trip_date), "PPP")}</p>
+                              <p className="text-lg font-medium">{format(new Date(travelDate), "PPP")}</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">{content.departureTime}</p>

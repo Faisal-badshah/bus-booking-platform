@@ -1158,7 +1158,7 @@ const { language } = useLanguage();
                 routeName: selectedTrip.routes.name,
                 fromStop: fromStop,
                 toStop: toStop,
-                tripDate: selectedTrip.trip_date,
+                tripDate: selectedDate,
                 departureTime: selectedTrip.departure_time,
                 arrivalTime: selectedTrip.arrival_time,
                 busName: "Bus"

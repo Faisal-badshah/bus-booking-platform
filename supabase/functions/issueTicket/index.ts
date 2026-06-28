@@ -104,9 +104,9 @@ serve(async (req: Request) => {
       .from("bookings")
       .select(
         `
-        id, user_id, trip_id, seat_number, passenger_name, passenger_email, 
+        id, user_id, trip_id, seat_number, passenger_name, passenger_email,
         passenger_phone, total_amount, status, confirmed_at, payment_reference,
-        from_index, to_index,
+        from_index, to_index, booking_date,
         trips:trip_id (
           trip_date, departure_time, arrival_time,
           routes:route_id (name, stops),
@@ -148,11 +148,15 @@ serve(async (req: Request) => {
     const to_stop = stops[booking.to_index] || "Unknown";
 
     // Generate QR
+    // Use the passenger's chosen travel date (booking_date), falling back to the
+    // trip's legacy date only for older rows without booking_date (V1).
+    const travelDate = booking.booking_date || trip?.trip_date;
+
     const qrPayload = {
       booking_id: booking.id,
       seat: booking.seat_number,
       passenger: booking.passenger_name,
-      trip_date: trip?.trip_date,
+      trip_date: travelDate,
     };
 
     const signedQR = signQRPayload(qrPayload, qrSecret);
@@ -201,7 +205,7 @@ serve(async (req: Request) => {
 
     addKeyValue("Passenger", passengerName, true);
     addKeyValue("Route", `${from_stop} to ${to_stop}`, true);
-    addKeyValue("Date & Time", `${trip?.trip_date || "N/A"} at ${trip?.departure_time || "N/A"}`, true);
+    addKeyValue("Date & Time", `${travelDate || "N/A"} at ${trip?.departure_time || "N/A"}`, true);
     addKeyValue("Seat", String(booking.seat_number), true);
     addKeyValue("Fare", `INR ${booking.total_amount}`, true);
     addKeyValue("Booking ID", booking.id.substring(0, 8) + "...");

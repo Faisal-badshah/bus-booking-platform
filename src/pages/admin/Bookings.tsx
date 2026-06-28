@@ -172,7 +172,11 @@ export default function Bookings() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredBookings.map((booking) => (
+                  {filteredBookings.map((booking) => {
+                    // Use the passenger's chosen travel date (booking_date), not the
+                    // trip's legacy date field (V1).
+                    const travelDate = booking.booking_date || booking.trips?.trip_date;
+                    return (
                     <TableRow key={booking.id}>
                       <TableCell className="font-medium">
                         <span className="truncate block max-w-[120px]">{booking.passenger_name}</span>
@@ -189,8 +193,8 @@ export default function Bookings() {
                         </span>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {booking.trips?.trip_date &&
-                          format(new Date(booking.trip_date), "MMM dd, yyyy")}
+                        {travelDate &&
+                          format(new Date(travelDate), "MMM dd, yyyy")}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">{booking.seat_numbers.join(", ")}</TableCell>
                       <TableCell>₹{booking.total_amount}</TableCell>
@@ -218,7 +222,8 @@ export default function Bookings() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
