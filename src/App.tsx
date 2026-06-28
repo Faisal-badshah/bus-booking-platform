@@ -14,6 +14,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { RouteGuard } from "@/components/RouteGuard";
 import { SuperAdminRouteGuard } from "@/components/SuperAdminRouteGuard";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Services from "./pages/Services";
@@ -89,6 +90,7 @@ const App = () => {
           <div className={`flex flex-col min-h-screen ${darkMode ? "dark" : ""}`}>
             <Navbar user={user} toggleDarkMode={toggleDarkMode} darkMode={darkMode} />
             <main className="flex-1">
+              <ErrorBoundary>
               <Routes>
                 {/* Public Routes - redirect admins/staff to their dashboards */}
                 <Route path="/" element={
@@ -249,6 +251,7 @@ const App = () => {
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </ErrorBoundary>
             </main>
             <Footer />
           </div>
