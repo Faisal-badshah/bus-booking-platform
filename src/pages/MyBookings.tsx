@@ -325,9 +325,12 @@ export default function MyBookings() {
                   const hasTicket = group.bookings.some(b => b.ticket_url);
                   const firstTicketUrl = group.bookings.find(b => b.ticket_url)?.ticket_url;
 
-                  // Use the passenger's chosen travel date (booking_date), not the
-                  // trip's legacy date field (V1).
+                  // Resolve the passenger's actual chosen values from the booking,
+                  // not the trip's legacy/empty fields (V1 date, V2 place).
                   const firstBooking = group.bookings[0];
+                  const routeStops = route?.stops || [];
+                  const fromStop = routeStops[firstBooking?.from_index] ?? "Unknown stop";
+                  const toStop = routeStops[firstBooking?.to_index] ?? "Unknown stop";
                   const travelDate = firstBooking?.booking_date || trip?.trip_date;
 
                   return (
@@ -352,7 +355,7 @@ export default function MyBookings() {
                                 )}
                               </div>
                               <CardDescription className="text-base">
-                                {trip?.from_city} → {trip?.to_city}
+                                {fromStop} → {toStop}
                               </CardDescription>
                             </div>
                             {getStatusBadge(group.status)}

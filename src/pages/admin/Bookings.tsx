@@ -49,7 +49,7 @@ export default function Bookings() {
   const fetchBookings = async () => {
     const { data, error } = await supabase
       .from("bookings")
-      .select("*, trips(from_city, to_city, trip_date, departure_time), profiles(full_name)")
+      .select("*, trips(from_city, to_city, trip_date, departure_time, routes(stops)), profiles(full_name)")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -173,8 +173,12 @@ export default function Bookings() {
                 </TableHeader>
                 <TableBody>
                   {filteredBookings.map((booking) => {
-                    // Use the passenger's chosen travel date (booking_date), not the
-                    // trip's legacy date field (V1).
+                    // Resolve the passenger's chosen values: place from the booking's
+                    // segment indices (V2), date from booking_date (V1), not the
+                    // trip's legacy/empty fields.
+                    const stops = booking.trips?.routes?.stops || [];
+                    const fromStop = stops[booking.from_index] ?? "Unknown stop";
+                    const toStop = stops[booking.to_index] ?? "Unknown stop";
                     const travelDate = booking.booking_date || booking.trips?.trip_date;
                     return (
                     <TableRow key={booking.id}>
@@ -189,7 +193,7 @@ export default function Bookings() {
                       </TableCell>
                       <TableCell>
                         <span className="truncate block max-w-[120px]">
-                          {booking.trips?.from_city} → {booking.trips?.to_city}
+                          {fromStop} → {toStop}
                         </span>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">

@@ -48,6 +48,10 @@ interface TripInfo {
   departure_time: string;
   from_city: string;
   to_city: string;
+  routes?:
+    | { name: string; stops: string[] }
+    | { name: string; stops: string[] }[]
+    | null;
 }
 
 interface VerificationResult {
@@ -178,7 +182,7 @@ const TripManifest = () => {
       // Fetch trip info
       const { data: trip, error: tripError } = await supabase
         .from("trips")
-        .select("route, departure_time, from_city, to_city")
+        .select("route, departure_time, from_city, to_city, routes:route_id (name, stops)")
         .eq("id", tripId)
         .single();
 
@@ -606,6 +610,14 @@ const TripManifest = () => {
   const boardedCount = passengers.filter((p) => p.boarded).length;
   const pendingCount = passengers.filter((p) => !p.boarded).length;
 
+  // Resolve the trip's route label and endpoints from the route relation, since
+  // the legacy trips.route / from_city / to_city fields are stored empty (V2).
+  const tripRoute = Array.isArray(tripInfo?.routes) ? tripInfo?.routes[0] : tripInfo?.routes;
+  const tripStops = tripRoute?.stops || [];
+  const routeLabel = tripRoute?.name || tripInfo?.route || "Trip";
+  const originStop = tripStops[0] ?? "Unknown stop";
+  const destStop = tripStops[tripStops.length - 1] ?? "Unknown stop";
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -629,9 +641,9 @@ const TripManifest = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
-              <h1 className="font-bold">{tripInfo?.route}</h1>
+              <h1 className="font-bold">{routeLabel}</h1>
               <p className="text-sm opacity-90">
-                {tripInfo?.from_city} → {tripInfo?.to_city} • {tripInfo?.departure_time}
+                {originStop} → {destStop} • {tripInfo?.departure_time}
               </p>
             </div>
           </div>
